@@ -16,4 +16,4 @@ Studying Java data structures and algorithms
  * 13. Swapping rows and columns of first minimum and appointed element of matrix
  * 14. Ordering matrix row elements so that zeroes placed behind
  * 15. Decimal matrix rounding
- 
+ * 16. Fetching list of saddling points
