@@ -20,6 +20,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+import javax.management.RuntimeErrorException;
+
 import math.Ordinal;
 import sort.QuickSorter;
 import sort.QuickSorter.Sequence;
@@ -92,7 +94,8 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	/**
 	 * Represents position of one element of matrix
 	 */
-	class Position implements Comparable<Position> {
+	class Position {
+		
 		private final int row, column;
 		
 		public Position(final int row,final int column) {
@@ -109,18 +112,26 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		}
 		
 		@SuppressWarnings("unchecked")
-		@Override public boolean equals(final Object o) {
+		@Override
+		public boolean equals(final Object o) {
 			if(o instanceof Matrix.Position) {
-				return getValue().equals(((Matrix<T>.Position)o).getValue());
-			}else return false;
+				Position a=(Position)o;
+				return this.getRow()==a.getRow() && this.getColumn()==a.getColumn();
+			}else {
+				return false;
+			}
 		}
 		
-		public boolean equals(final T o) {
-			return getValue().equals(o);
+		@Override
+		public int hashCode() {
+			return row*13+column;
 		}
 		
-		@Override public int compareTo(final Position p) {
-			return getValue().compareTo(p.getValue());
+		public class ValueComparator implements Comparator<Position> {
+			@Override
+			public int compare(Matrix<T>.Position o1, Matrix<T>.Position o2) {
+				return o1.getValue().compareTo(o2.getValue());
+			}
 		}
 
 		/**
@@ -129,20 +140,22 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		* @param extremum value found on previous iterations
 		* @return position of current extremum value
 		*/
-		private final Position updateExtremumList(final List<Position> list, final Position extremum, final BiFunction<Position,Position,Integer> compareFunc) {
+		private final Position updateExtremumList(final Set<Position> list, final Position extremum, final boolean maximum) {
+			final Comparator<Position> comparator=maximum?new ValueComparator():new ValueComparator().reversed();
 			Position newExtremum=extremum;
-			if(compareFunc.apply(this,extremum)>0) {//new extremum found
+			int comparison;
+			if((comparison=comparator.compare(this,extremum))>0) {//new extremum found
 				newExtremum=this;
 				list.clear();
 				list.add(this);//start accumulating extremums anew
-			}else if(compareFunc.apply(this,extremum)==0) {
+			}else if(comparison==0) {
 				list.add(this);//add second copy of current extremum
 			}
 			return newExtremum;
 		}
 		
 		@Override public String toString(){
-			return String.format("{%d,%d}", row,column);
+			return String.format("{%d,%d}",row,column);
 		}
 		
 	}
@@ -252,15 +265,30 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		
 		/**
 		* Scans segment and collects positions of extremum value within the segment
-		* @param list of collected positions from previous iteration
-		* @param comparePositionFunc function for position comparing 
+		* @param extremums of collected positions from previous iteration
+		* @param maximum find maximum value if {@code true}, minimum otherwise 
 		* @return list of positions of extremum values of the segment merged with {@code list}
 		*/
-		public void getExtremumList(final List<Position> list, final BiFunction<Position,Position,Integer> comparePositionFunc){
-			if(list.isEmpty()) throw new RuntimeException("list of accumulated extremums should contain at least one item"); 
-			Position extremum = list.get(0);
-			for(SegmentIterator i=listIterator();i.hasNext();){
-				extremum = i.nextPosition().updateExtremumList(list, extremum, comparePositionFunc);
+		public void getExtremumList(final Set<Position> extremums, final boolean maximum){
+			final Iterator<Position> iterator=extremums.iterator();
+			if(iterator.hasNext()) {
+				Position extremum = iterator.next();
+				for(final SegmentIterator i=listIterator();i.hasNext();){
+					extremum = i.nextPosition().updateExtremumList(extremums, extremum, maximum);
+				}
+			}else {
+				throw new RuntimeException("list of accumulated extremums should contain at least one item");
+			}
+		}
+		
+		public Set<Position> getExtremums(final boolean maximum){
+			if(length()>=1) {
+				final Set<Position> extremums=new HashSet<>();
+				extremums.add(createPosition(start));
+				getExtremumList(extremums, maximum);
+				return extremums;
+			}else {
+				throw new RuntimeException("segment should contain at least one element");
 			}
 		}
 		
@@ -468,7 +496,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	
 	/**
 	 * Creates square matrix
-	 * Note: it doesn't initialize elements, so it made private
+	 * Note: it doesn't initialize elements, so it's been made private
 	 * @param dimension number of columns and rows of square matrix
 	 */
 	private Matrix(final int dimension) {
@@ -557,7 +585,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	* 1. all positions that are located on the same row/column are ignored and skipped except first because deleting 2 rows(columns) and one column(row) leads to creation of non-square matrix
 	* 2. dimension of new matrix must remain at least 1 or greater  
 	*/
-	public Matrix(final Matrix<T> org,final List<Position> positions){
+	public Matrix(final Matrix<T> org,final Set<Position> positions){
 		//form set of unique columns and rows to cross out
 		Set<Integer> columns=new HashSet<>();
 		Set<Integer> rows=new HashSet<>();
@@ -670,32 +698,19 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	}
 	
 	/**
-	* Locates positions of extremum value within matrix
-	* @return list of extremum value positions
-	*/
-	public List<Position> getExtremum(final BiFunction<Position,Position,Integer> comparePositionFunc) {
-		final List<Position> list=new ArrayList<>(dimension);
-		list.add(new Position(0, 0));
-		for(final Iterator<Segment> i=iterator();i.hasNext();) {
-			i.next().getExtremumList(list,comparePositionFunc);
-		}
-		return list;
-	}
-	
-	/**
 	* Creates list of positions of elements that are equal to {@code checkValue}
 	* @param checkValue value to check
 	* @return list of positions of elements that are equal to {@code checkValue}
 	*/
-	public List<Position> getEqualTo(final T checkValue){
-		List<Position> list=new ArrayList<>(dimension);
+	public Set<Position> getEqualTo(final T checkValue){
+		Set<Position> occurences=new HashSet<>();
 		for(final Segment segment:this){
 			for(final Segment.SegmentIterator i=segment.listIterator();i.hasNext();){
-				Position p=i.nextPosition();
-				if(p.equals(checkValue)) list.add(p);
+				final Position p=i.nextPosition();
+				if(p.getValue().equals(checkValue)) occurences.add(p);
 			}
 		}
-		return list;
+		return occurences;
 	}
 	
 	/**
@@ -1317,6 +1332,46 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 			}
 		}
 		return this;
+	}
+	
+	/**
+	* Collects positions of extremums within the whole matrix
+	* @param maximum collect maximums if {@code true} or minimums if {@code false}
+	* @return list of extremums
+	*/
+	public Set<Position> getExtremums(final boolean maximum) {
+		checkDimension(dimension);
+		final Set<Position> extremums=new HashSet<>();
+		extremums.add(new Position(0, 0));
+		for(final Segment segment:this) {
+			segment.getExtremumList(extremums, maximum);
+		}
+		return extremums;
+	}
+	
+	/**
+	 * Collects positions of extremums within each segment of matrix (either row or column) and computes intersection set
+ 	 * @param iType determine extremum for row if {@code ROW} or column if {@code COLUMN}
+	 * @param maximum collect maximums if {@code true} or minimums if {@code false}
+	 * @return list of extremums
+	 */
+	public Set<Position> getExtremumsForEachSegment(final IndexType iType,final boolean maximum) {
+		final Set<Position> extremums=new HashSet<>();
+		for(final Iterator<Segment> i=iterator(iType);i.hasNext();) {
+			extremums.addAll(i.next().getExtremums(maximum));
+		}
+		return extremums;
+	}
+	
+	/**
+	 * Fetches list of saddle points for given matrix
+	 * @return set of positions where saddle points located
+	 */
+	public Set<Position> getSaddlePoints(){
+		Set<Position> minimums=getExtremumsForEachSegment(IndexType.ROW,false);
+		Set<Position> maximums=getExtremumsForEachSegment(IndexType.COLUMN,true);
+		minimums.retainAll(maximums);
+		return minimums;
 	}
 
 }

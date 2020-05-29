@@ -26,7 +26,8 @@ import math.Decimal;
  * 12. Creation of matrix without rows and columns where zeroes found
  * 13. Swapping rows and columns of first minimum and appointed element of matrix
  * 14. Ordering matrix row elements so that zeroes placed behind
- * 15. Decimal matrix rounding 
+ * 15. Decimal matrix rounding
+ * 16. Fetching list of saddling points
  * 
  * @author Serhii Pylypenko
  * @since 2020-03-15
@@ -123,19 +124,18 @@ public class Runner {
 			System.out.printf("\nOriginal matrix:\n%s\nSubtracted average matrix:\n%s\n", m, averageSubtracted);
 			
 			System.out.printf("List of maximum values in matrix:\n%s\nis %s\nand matrix without deleted rows and columns: %s\n", 
-					m,m.getExtremum(Matrix.Position::compareTo),new Matrix<Cardinal>(m,m.getExtremum(Matrix.Position::compareTo)));
+					m,m.getExtremums(true),new Matrix<Cardinal>(m,m.getExtremums(true)));
 
 			System.out.printf("List of zeroes in matrix:\n%s\nis %s\nand matrix without deleted rows and columns: %s\n", m,m.getEqualTo(Cardinal.ZERO),new Matrix<Cardinal>(m,m.getEqualTo(Cardinal.ZERO)));
 			
 			int minRow=readValue("Please enter row to place minimum: ",scanner,0,dimension-1);
 			int minCol=readValue("Please enter column to place minimum: ",scanner,0,dimension-1);
 
-			Comparator<Matrix<Cardinal>.Position> reverseComparator=Comparator.reverseOrder();
 			System.out.printf("First minimum value in matrix:\n%s\nis %s\nand matrix with swapped rows and columns: %s\n", 
-					m,m.getExtremum(reverseComparator::compare).get(0),
+					m,m.getExtremums(false).iterator().next(),
 					new Matrix<Cardinal>(m).swapSegments(
 							m.new Position(minRow,minCol),
-							m.getExtremum(reverseComparator::compare).get(0)));
+							m.getExtremums(false).iterator().next()));
 			
 			Comparator<Cardinal> compareByAbsoluteValueReversed=new Comparator<Cardinal>(){
 				@Override public int compare(final Cardinal o1, final Cardinal o2) {
@@ -151,6 +151,15 @@ public class Runner {
 			Matrix<Decimal> roundedMatrix=randomMatrix.process(Decimal::round);
 			System.out.printf("Decimal matrix %dx%d filled with rounded values:\n%s\n", dimension, dimension, roundedMatrix);
 			
+			//m=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,x->(long)(x.getRow()+x.getColumn()));
+			System.out.printf(
+					"Matrix:\n%s\nRow minimums and columns maximums:\n%s\n%s\nList of saddle points (%d): %s\n", 
+					m,
+					m.getExtremumsForEachSegment(IndexType.ROW,false),
+					m.getExtremumsForEachSegment(IndexType.COLUMN,true),
+					m.getSaddlePoints().size(),
+					m.getSaddlePoints());
+
 		}
 				
 	}
