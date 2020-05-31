@@ -17,3 +17,5 @@ Studying Java data structures and algorithms
  * 14. Ordering matrix row elements so that zeroes placed behind
  * 15. Decimal matrix rounding
  * 16. Fetching list of saddling points
+ * 17. Ordering matrix by row totals
+ * 19. Sorting matrix by column characteristics in descending order
