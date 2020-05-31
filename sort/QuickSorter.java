@@ -4,10 +4,10 @@ import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.Deque;
 
-public class QuickSorter<T,K> {
+public class QuickSorter<K> {
 	
 	//Container interface
-	public interface Sequence<T,K>{
+	public interface Sequence<K>{
 		public int size();
 		public K getKey(final int index);
 		public void swap(final int from,final int to);
@@ -46,7 +46,7 @@ public class QuickSorter<T,K> {
 		}
 	}
 	
-	private void splitRange(final Sequence<T,K> seq){
+	private void splitRange(final Sequence<K> seq){
 		
 			final Range range=postponed.pop();//take another range from stack
 			if(range.meaningful()) {//process range if it's length at least 2 or greater
@@ -97,7 +97,7 @@ public class QuickSorter<T,K> {
 
 		}
 
-		public void sort(final Sequence<T,K> seq) {
+		public void sort(final Sequence<K> seq) {
 			postponed.push(new Range(0,seq.size()-1));//very first range encompasses all the list to be sorted
 			do {
 				splitRange(seq);//fetch range and split it in two

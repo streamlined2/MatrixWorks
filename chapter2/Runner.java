@@ -28,6 +28,8 @@ import math.Decimal;
  * 14. Ordering matrix row elements so that zeroes placed behind
  * 15. Decimal matrix rounding
  * 16. Fetching list of saddling points
+ * 17. Ordering matrix by row totals
+ * 19. Sorting matrix by column characteristics in descending order
  * 
  * @author Serhii Pylypenko
  * @since 2020-03-15
@@ -153,13 +155,38 @@ public class Runner {
 			
 			//m=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,x->(long)(x.getRow()+x.getColumn()));
 			System.out.printf(
-					"Matrix:\n%s\nRow minimums and columns maximums:\n%s\n%s\nList of saddle points (%d): %s\n", 
+					"Matrix:\n%s\nRow minimums and columns maximums:\n%s\n%s\nList of saddle points (%d): %s\n\n", 
 					m,
 					m.getExtremumsForEachSegment(IndexType.ROW,false),
 					m.getExtremumsForEachSegment(IndexType.COLUMN,true),
 					m.getSaddlePoints().size(),
 					m.getSaddlePoints());
-
+			
+			//final Matrix<Cardinal> m2=new Matrix<>(new int[][] {{9,9,9},{3,3,3},{1,1,1}},Cardinal.LONG_INITIALIZER);
+			final Matrix<Cardinal> m2=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension)));
+			System.out.printf("Matrix:\n%s\n",m2);
+			System.out.printf("sorted by row totals:\n%s\n",
+					m2.sortBy(
+							Comparator.naturalOrder(),
+							m2::getDimension,
+							index->m2.new Segment(IndexType.ROW, index).sum(),
+							(index1,index2)->
+								m2.new Segment(IndexType.ROW, index1).swap(m2.new Segment(IndexType.ROW, index2))
+					)
+			);
+			
+			final Matrix<Cardinal> m3=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension)));
+			System.out.printf("Matrix:\n%s\n",m3);
+			System.out.printf("sorted by column characteristics in descending order:\n%s\n",
+					m3.sortBy(
+							Comparator.reverseOrder(),
+							m3::getDimension,
+							index->m3.new Segment(IndexType.COLUMN, index).sum(Cardinal::abs),
+							(index1,index2)->
+								m3.new Segment(IndexType.COLUMN, index1).swap(m3.new Segment(IndexType.COLUMN, index2))
+					)
+			);
+			
 		}
 				
 	}

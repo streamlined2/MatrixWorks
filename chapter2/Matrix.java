@@ -16,11 +16,11 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-
-import javax.management.RuntimeErrorException;
 
 import math.Ordinal;
 import sort.QuickSorter;
@@ -36,6 +36,10 @@ import sort.QuickSorter.Sequence;
 public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix<T>.Segment> {
 	
 	public final static int SIDE_COUNT=4;
+	
+	private static void checkIndex(final String name,final int index,final int from,final int to) {
+		if(index<from || index>=to) throw new RuntimeException(String.format("index of %s (%d) must be within [%d,%d)",name,index,from,to));
+	}
 	
 	public enum IndexType { ROW, COLUMN;
 		public IndexType getOpposite() {
@@ -92,13 +96,23 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	};
 	
 	/**
+	 * Returns dimension of matrix
+	 * @return dimension of matrix
+	 */
+	final public int getDimension() {
+		return dimension;
+	}
+	
+	/**
 	 * Represents position of one element of matrix
 	 */
-	class Position {
+	 public class Position {
 		
 		private final int row, column;
 		
 		public Position(final int row,final int column) {
+			checkIndex("row",row,0,dimension);
+			checkIndex("column",column,0,dimension);
 			this.row=row;
 			this.column=column;
 		}
@@ -161,7 +175,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	}
 	
 	/**
-	 * Points at segment of row (if {@code indexType} equals to {@code IndexType.ROW}) or 
+	 * Represents segment of row (if {@code indexType} equals to {@code IndexType.ROW}) or 
 	 * column (if {@code indexType} equals to {@code IndexType.COLUMN}) at {@code index} of outer matrix instance
 	 * starting from {@code start} up to {@code finish}
 	 */
@@ -176,6 +190,9 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		}
 		
 		public Segment(final IndexType iType,final int index,final int start,final int finish) {
+			checkIndex("row/column",index,0,dimension);
+			checkIndex("segment finish",finish,1,dimension+1);
+			checkIndex("segment start",start,0,finish);
 			this.indexType=iType;
 			this.index=index;
 			this.start=start;
@@ -183,6 +200,8 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		}
 		
 		public Segment(final IndexType iType,final int index,final int depth) {
+			checkIndex("row/column",index,0,dimension);
+			checkIndex("depth",depth,0,dimension);
 			this.quadrantSpecific=true;
 			this.indexType=iType;
 			this.index=index;
@@ -247,7 +266,8 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 			return sum(IDENTITY_OPERATOR);
 		}
 		
-		public T sum(final UnaryOperator<T> op) {		
+		public T sum(final UnaryOperator<T> op) {
+			assert dimension>0: "empty segment prohibited";
 			T accum=data[0][0].zero();
 			for(T value:this) {
 				accum=accum.add(op.apply(value));			
@@ -374,7 +394,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 			return ascendingIndex()? index-1: index+1;
 		}
 		
-		class SegmentIterator implements ListIterator<T>{
+		public class SegmentIterator implements ListIterator<T>{
 			private int index=startIndex();//points at 'next' element
 			private boolean movingRight=true;//to determine correct index for 'set' operation
 
@@ -461,7 +481,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 			return new Segment(nextType,nextIndex,depth);
 		}
 		
-		private class SegmentSequence implements Sequence<Segment,T>{
+		private class SegmentSequence implements Sequence<T>{
 
 			@Override public int size() {
 				return length();
@@ -480,7 +500,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		}
 
 		public void sort(final Comparator<T> comparator) {
-			new QuickSorter<Segment,T>(comparator).sort(new SegmentSequence());
+			new QuickSorter<T>(comparator).sort(new SegmentSequence());
 		}
 		
 	}
@@ -490,7 +510,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		return (T[][]) Array.newInstance(Ordinal.class, new int[] {dimension,dimension});
 	}
 	
-	private void checkDimension(final int dimension) {
+	private static void checkDimension(final int dimension) {
 		if(dimension<1) throw new RuntimeException(String.format("wrong dimension %d, it should be at least 1 or greater",dimension));		
 	}
 	
@@ -770,8 +790,8 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	 * @param row number of row to sort matrix by
 	 */
 	public void quickSortByRow(final int row) {
-		new QuickSorter<T[],T>(Comparator.naturalOrder()).
-		sort(new Sequence<T[],T>() {
+		new QuickSorter<T>(Comparator.naturalOrder()).
+		sort(new Sequence<T>() {
 			
 			private final List<T> cache=new ArrayList<>(dimension);
 			
@@ -798,8 +818,8 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	 * @param column number of column to sort matrix by
 	 */
 	public void quickSortByColumn(final int column) {
-		new QuickSorter<T[],T>(Comparator.naturalOrder()).
-		sort(new Sequence<T[],T>() {
+		new QuickSorter<T>(Comparator.naturalOrder()).
+		sort(new Sequence<T>() {
 			
 			private final List<T> cache=new ArrayList<T>(dimension);
 			
@@ -1035,7 +1055,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	 * @return instance of class {@code Segment} that points at largest continuous block of numbers along column in given matrix
 	 */
 	private Segment getLargestColumnContinuouosBlock(final boolean ascending) {
-		Segment block=new Segment(IndexType.COLUMN,0,0,0);
+		Segment block=new Segment(IndexType.COLUMN,0,0,1);
 		int max=1;
 		final Comparator<T> comp=ascending?Comparator.naturalOrder():Comparator.reverseOrder();
 		for(int column=0;column<dimension;column++) {
@@ -1061,7 +1081,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	 * @return instance of class {@code Segment} that points at largest continuous block of numbers along row in given matrix
 	 */
 	private Segment getLargestRowContinuouosBlock(final boolean ascending) {
-		Segment block=new Segment(IndexType.ROW,0,0,0);
+		Segment block=new Segment(IndexType.ROW,0,0,1);
 		int max=1;
 		final Comparator<T> comp=ascending?Comparator.naturalOrder():Comparator.reverseOrder();
 		for(int row=0;row<dimension;row++) {
@@ -1104,7 +1124,9 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		for(int row=0;row<dimension;row++) {
 			final int start=findNextPositive(row, 0);
 			final int finish=findNextPositive(row, start+1);
-			segments.add(new Segment(IndexType.ROW,row,start+1,finish).sum());
+			if(start+1<finish) {
+				segments.add(new Segment(IndexType.ROW,row,start+1,finish).sum());
+			}
 		}
 		return segments;
 	}
@@ -1174,6 +1196,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 			while(k<dimension && !free[k]) k++;//skip occupied columns until free one found
 			accum=data[row][k];
 		}else {//scan given 'row', compute determinants and combine into final result
+			assert dimension>=1: "matrix must contain at least 1 element";
 			accum=data[0][0].zero();//matrix size be at least 1 and elements initialized beforehand
 			int position=0;
 			for(int column=0;column<dimension;column++) {
@@ -1198,6 +1221,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	 */
 	public T getDeterminant() {
 		
+		assert dimension>=1: "matrix must contain at least 1 element";
 		final T zero=data[0][0].zero();//size be at least 1 and elements initialized beforehand
 		
 		class TraversalState {//holds data for matrix traversal
@@ -1372,6 +1396,34 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		Set<Position> maximums=getExtremumsForEachSegment(IndexType.COLUMN,true);
 		minimums.retainAll(maximums);
 		return minimums;
+	}
+	
+	/**
+	 * Quicksorts data that comply with {@code Sequence} interface via passed comparator and methods for size determination, key mapping and element swapping
+	 * @param <X> type of key to sort on
+	 * @param comparator to order keys of sequence elements
+	 * @param sizeFunc function that returns size of sequence to sort
+	 * @param keyMapFunc function that maps index of sequence element to key
+	 * @param swapFunc function that interchanges two elements of a sequence  
+	 */
+	public Matrix<T> sortBy(
+			final Comparator<? super T> comparator,final Supplier<Integer> sizeFunc,final Function<Integer,? extends T> keyMapFunc,final BiConsumer<Integer,Integer> swapFunc) {
+
+		new QuickSorter<T>(comparator).sort(new Sequence<>() {
+			@Override public int size() {
+				return sizeFunc.get();
+			}
+
+			@Override public T getKey(final int index) {
+				return keyMapFunc.apply(index);
+			}
+
+			@Override public void swap(final int from, final int to) {
+				swapFunc.accept(from, to);
+			}
+		});
+		
+		return this;
 	}
 
 }
