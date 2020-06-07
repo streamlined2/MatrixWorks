@@ -18,4 +18,6 @@ Studying Java data structures and algorithms
  * 15. Decimal matrix rounding
  * 16. Fetching list of saddling points
  * 17. Ordering matrix by row totals
- * 19. Sorting matrix by column characteristics in descending order
+ * 18. Sorting matrix by column characteristics in descending order
+ * 19. Determining set of local minimums and its size
+ * 20. Determining smallest of local maximums
