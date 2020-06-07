@@ -14,8 +14,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -103,10 +106,19 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		return dimension;
 	}
 	
+	private class ValueComparator implements Comparator<Position> {
+		@Override
+		public int compare(final Position o1,final Position o2) {
+			return o1.getValue().compareTo(o2.getValue());
+		}
+	}
+	
+	private final ValueComparator VALUE_COMPARATOR=new ValueComparator(); 
+	
 	/**
 	 * Represents position of one element of matrix
 	 */
-	 public class Position {
+	 public class Position implements Comparable<Position>{
 		
 		private final int row, column;
 		
@@ -138,16 +150,31 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		
 		@Override
 		public int hashCode() {
-			return row*13+column;
+			return Objects.hash(row,column);//row*13+column;
 		}
 		
-		public class ValueComparator implements Comparator<Position> {
-			@Override
-			public int compare(Matrix<T>.Position o1, Matrix<T>.Position o2) {
-				return o1.getValue().compareTo(o2.getValue());
+		/**
+		 * Determines if value at given position is local extremum
+		 * @param maximum check for local maximum if {@code true}
+		 * @return {@code true} if it is local extremum
+		 */
+		public boolean isLocalExtremum(final boolean maximum) {
+			final Comparator<T> comparator=maximum?Comparator.naturalOrder():Comparator.reverseOrder();
+			boolean yes=true;
+			for(int i=row-1;i<=row+1;i++) {
+				if(i>=0 && i<dimension) {
+					for(int j=column-1;j<=column+1;j++) {
+						if(j>=0 && j<dimension) {
+							if(!(i==row && j==column)) {
+								yes=yes && comparator.compare(getValue(), data[i][j])>0;
+							}
+						}
+					}
+				}
 			}
+			return yes;
 		}
-
+		
 		/**
 		* Updates current extremum value and list of extremum positions
 		* @param list of accumulated extremum value positions
@@ -155,7 +182,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		* @return position of current extremum value
 		*/
 		private final Position updateExtremumList(final Set<Position> list, final Position extremum, final boolean maximum) {
-			final Comparator<Position> comparator=maximum?new ValueComparator():new ValueComparator().reversed();
+			final Comparator<Position> comparator=maximum?VALUE_COMPARATOR:VALUE_COMPARATOR.reversed();
 			Position newExtremum=extremum;
 			int comparison;
 			if((comparison=comparator.compare(this,extremum))>0) {//new extremum found
@@ -170,6 +197,13 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		
 		@Override public String toString(){
 			return String.format("{%d,%d}",row,column);
+		}
+
+		@Override
+		public int compareTo(Matrix<T>.Position o) {
+			return this.row==o.row?
+					Integer.compare(this.column, o.column):
+						Integer.compare(this.row, o.row);
 		}
 		
 	}
@@ -1426,4 +1460,31 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		return this;
 	}
 
+	/**
+	 * Collects set of local extremums within matrix
+	 * @param maximum look for maximums if {@code true} and for minimums if {@code false}
+	 * @return set of local extremums
+	 */
+	public Set<Position> getLocalExtremums(final boolean maximum){
+		final Set<Position> extremums=new HashSet<>();
+		for(final Segment row:this) {
+			for(final Segment.SegmentIterator i=row.listIterator();i.hasNext();) {
+				final Position position=i.nextPosition();
+				if(position.isLocalExtremum(maximum)) extremums.add(position);
+			}
+		}
+		return extremums;
+	}
+	
+	/**
+	 * Collects local extremums within matrix and places them into sorted set of {@code Position}
+	 * @param maximum look for maximums if {@code true} and for minimums if {@code false}
+	 * @return sorted set of local extremums
+	 */
+	  public SortedSet<Position> getSortedSetOfLocalExtremums(final boolean maximum){ 
+		  final SortedSet<Position> set=new TreeSet<>(VALUE_COMPARATOR);
+		  set.addAll(getLocalExtremums(maximum));
+		  return set;
+	 }
+	 
 }

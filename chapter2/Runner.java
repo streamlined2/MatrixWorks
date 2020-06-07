@@ -29,7 +29,9 @@ import math.Decimal;
  * 15. Decimal matrix rounding
  * 16. Fetching list of saddling points
  * 17. Ordering matrix by row totals
- * 19. Sorting matrix by column characteristics in descending order
+ * 18. Sorting matrix by column characteristics in descending order
+ * 19. Determining set of local minimums and its size
+ * 20. Determining smallest of local maximums
  * 
  * @author Serhii Pylypenko
  * @since 2020-03-15
@@ -186,6 +188,25 @@ public class Runner {
 								m3.new Segment(IndexType.COLUMN, index1).swap(m3.new Segment(IndexType.COLUMN, index2))
 					)
 			);
+			
+			final Matrix<Cardinal> m4=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension)));
+			System.out.printf("Matrix:\n%s\n",m4);
+			System.out.printf("has local minimums (size %d): %s\n", 
+					m4.getLocalExtremums(false).size(), 
+					m4.getLocalExtremums(false));
+			
+			final Matrix<Cardinal> m5=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension))); System.out.printf("Matrix:\n%s\n",m5);
+			/*
+			 * Matrix<Cardinal> m5=new Matrix<>(new int[][] { {1, 6, -2, 3, 6, 0}, {-1, 4,
+			 * 4, -6, 5, -2}, {0, 2, 6, -4, -2, 6}, {4, -3, 5, -3, 5, -4}, {-1, 4, -3, 0,
+			 * -2, -5}, {1, 0, -3, -1, -5, 0}}, Cardinal.LONG_INITIALIZER );
+			 */	
+			System.out.printf("Matrix:\n%s\n",m5);
+			System.out.printf("has local maximums (size %d): %s\nand smallest maximum is %s at %s\n",
+			m5.getLocalExtremums(true).size(),
+			m5.getLocalExtremums(true),
+			m5.getSortedSetOfLocalExtremums(true).first().getValue(),
+			m5.getSortedSetOfLocalExtremums(true).first());
 			
 		}
 				
