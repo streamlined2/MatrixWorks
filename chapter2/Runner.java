@@ -2,11 +2,16 @@ package chapter2;
 
 import java.util.Comparator;
 import java.util.Scanner;
+import java.util.SortedSet;
+
 import chapter2.Matrix.Angle;
 import chapter2.Matrix.IndexType;
 import chapter2.Matrix.Rotation;
 import math.Cardinal;
 import math.Decimal;
+import math.Real;
+import sort.QuickSorter;
+import sort.SelectionSorter;
 
 /**
  * 
@@ -32,10 +37,11 @@ import math.Decimal;
  * 18. Sorting matrix by column characteristics in descending order
  * 19. Determining set of local minimums and its size
  * 20. Determining smallest of local maximums
+ * 21. Full/partial quick/selection sort of real matrix by diagonal
  * 
  * @author Serhii Pylypenko
  * @since 2020-03-15
- * @version 1.4
+ * @version 1.5
  *
  */
 
@@ -179,7 +185,7 @@ public class Runner {
 			
 			final Matrix<Cardinal> m3=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension)));
 			System.out.printf("Matrix:\n%s\n",m3);
-			System.out.printf("sorted by column characteristics in descending order:\n%s\n",
+			System.out.printf("sorted by column characteristics in descending order:\n%s\n\n",
 					m3.sortBy(
 							Comparator.reverseOrder(),
 							m3::getDimension,
@@ -191,22 +197,36 @@ public class Runner {
 			
 			final Matrix<Cardinal> m4=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension)));
 			System.out.printf("Matrix:\n%s\n",m4);
-			System.out.printf("has local minimums (size %d): %s\n", 
+			System.out.printf("has local minimums (size %d): %s\n\n", 
 					m4.getLocalExtremums(false).size(), 
 					m4.getLocalExtremums(false));
 			
-			final Matrix<Cardinal> m5=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension))); System.out.printf("Matrix:\n%s\n",m5);
-			/*
-			 * Matrix<Cardinal> m5=new Matrix<>(new int[][] { {1, 6, -2, 3, 6, 0}, {-1, 4,
-			 * 4, -6, 5, -2}, {0, 2, 6, -4, -2, 6}, {4, -3, 5, -3, 5, -4}, {-1, 4, -3, 0,
-			 * -2, -5}, {1, 0, -3, -1, -5, 0}}, Cardinal.LONG_INITIALIZER );
-			 */	
+			SortedSet<Matrix<Cardinal>.Position> localExtremums;
+			final Matrix<Cardinal> m5=new Matrix<>(dimension,Cardinal.LONG_INITIALIZER,(x)->Math.round((Math.random()*2*dimension-dimension)));
 			System.out.printf("Matrix:\n%s\n",m5);
-			System.out.printf("has local maximums (size %d): %s\nand smallest maximum is %s at %s\n",
+			System.out.printf("has local maximums (size %d): %s\nand smallest maximum is %s at %s\n\n",
 			m5.getLocalExtremums(true).size(),
 			m5.getLocalExtremums(true),
-			m5.getSortedSetOfLocalExtremums(true).first().getValue(),
-			m5.getSortedSetOfLocalExtremums(true).first());
+			(localExtremums=m5.getSortedSetOfLocalExtremums(true)).isEmpty()?"there are no local extremums":localExtremums.first().getValue(),
+			localExtremums.first());
+			
+			final Matrix<Real> m6=new Matrix<>(dimension,Real.DOUBLE_INITIALIZER,x->Math.random()*2*dimension-dimension);
+			final Matrix<Real> m6Copy=new Matrix<>(m6);
+			final Matrix<Real> m6Copy2=new Matrix<>(m6);
+			final Matrix<Real> m6Copy3=new Matrix<>(m6);
+
+			System.out.printf("Matrix:\n%s\n\n",m6);
+			new QuickSorter<Real>(Comparator.reverseOrder()).sort(m6.new DiagonallyScannedSequence());
+			System.out.printf("Quicksorted in descendent order by diagonal:\n%s\n",m6);
+			
+			new SelectionSorter<Real>(Comparator.reverseOrder()).sort(m6Copy.new DiagonallyScannedSequence());
+			System.out.printf("Selection-sorted in descendent order by diagonal:\n%s\n",m6Copy);
+
+			new SelectionSorter<Real>(Comparator.reverseOrder()).sort(m6Copy2.new DiagonallyScannedSequence(),m6Copy2.getDimension());
+			System.out.printf("Partially selection-sorted in descendent order by diagonal:\n%s\n",m6Copy2);
+
+			new SelectionSorter<Real>(Comparator.reverseOrder()).buildExtremumListAndSort(m6Copy3.new DiagonallyScannedSequence(),m6Copy3.getDimension());
+			System.out.printf("Another partially selection-sorted in descendent order by diagonal:\n%s\n",m6Copy3);
 			
 		}
 				

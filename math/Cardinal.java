@@ -9,8 +9,8 @@ public class Cardinal implements Ordinal<Cardinal>{
 
 	public static final Function<Long,Cardinal> LONG_INITIALIZER = (x)->new Cardinal(x);
 	
-	public static final Cardinal ZERO=new Cardinal(0);
-	public static final Cardinal ONE=new Cardinal(1);
+	public static final Cardinal ZERO=new Cardinal(0L);
+	public static final Cardinal ONE=new Cardinal(1L);
 	
 	private final BigInteger value;
 	
@@ -19,7 +19,7 @@ public class Cardinal implements Ordinal<Cardinal>{
 	}
 	
 	public Cardinal() {
-		this(0);
+		this(0L);
 	}
 	
 	private Cardinal(final BigInteger numValue) {

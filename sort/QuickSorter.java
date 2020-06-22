@@ -6,13 +6,6 @@ import java.util.Deque;
 
 public class QuickSorter<K> {
 	
-	//Container interface
-	public interface Sequence<K>{
-		public int size();
-		public K getKey(final int index);
-		public void swap(final int from,final int to);
-	}
-
 	private final Comparator<? super K> comparator;
 	private final Deque<Range> postponed;
 
@@ -41,7 +34,7 @@ public class QuickSorter<K> {
 			return right-left+1;
 		}
 		
-		public boolean meaningful() {
+		public boolean fruitful() {
 			return size()>=2;
 		}
 	}
@@ -49,7 +42,7 @@ public class QuickSorter<K> {
 	private void splitRange(final Sequence<K> seq){
 		
 			final Range range=postponed.pop();//take another range from stack
-			if(range.meaningful()) {//process range if it's length at least 2 or greater
+			if(range.fruitful()) {//process range if it's length at least 2 or greater
 				
 				//select divisor
 				final int divisorIndex = (range.getLeft()+range.getRight())/2;

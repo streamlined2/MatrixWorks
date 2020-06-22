@@ -1,10 +1,7 @@
 package chapter2;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,17 +24,20 @@ import java.util.function.UnaryOperator;
 
 import math.Ordinal;
 import sort.QuickSorter;
-import sort.QuickSorter.Sequence;
+import sort.Sequence;
+import utils.Utensils;
 
 /**
  * 
  * @author Serhii Pylypenko
  * @since 2020-02-15
- * @version 1.4
+ * @version 1.5
  * 
  */
-public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix<T>.Segment> {
+public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix<T>.Segment>, Serializable {
 	
+	private static final long serialVersionUID = -7708934672336335161L;
+
 	public final static int SIDE_COUNT=4;
 	
 	private static void checkIndex(final String name,final int index,final int from,final int to) {
@@ -135,6 +135,10 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		
 		public T getValue() {
 			return data[row][column];
+		}
+		
+		public void setValue(final T value) {
+			data[row][column]=value;
 		}
 		
 		@SuppressWarnings("unchecked")
@@ -598,7 +602,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	 */
 	public Matrix(final Matrix<T> original) {
 		this.dimension=original.dimension;
-		data=deepCopy(original);
+		this.data=Utensils.copy(original.data);
 	}
 	
 	/**
@@ -671,22 +675,6 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private T[][] deepCopy(final Matrix<T> original) {
-		try{
-			ByteArrayOutputStream bos=new ByteArrayOutputStream();
-			ObjectOutputStream os=new ObjectOutputStream(bos);
-			os.writeObject(original.data);
-			os.close();
-			ObjectInputStream is=new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
-			return (T[][]) is.readObject();
-		}catch(IOException exc) {
-			throw new RuntimeException(exc);
-		}catch(ClassNotFoundException exc2) {
-			throw new RuntimeException(exc2);
-		}
-	}
-	
 	@Override public Object clone() {
 		return new Matrix<T>(this);
 	}
@@ -1380,7 +1368,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	
 	/**
 	 * Processes every item of matrix by given {@code processor}
-	 * @param processor
+	 * @param processor processing method reference
 	 * @return processed matrix
 	 */
 	public Matrix<T> process(final Function<T,T> processor){
@@ -1443,7 +1431,7 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 	public Matrix<T> sortBy(
 			final Comparator<? super T> comparator,final Supplier<Integer> sizeFunc,final Function<Integer,? extends T> keyMapFunc,final BiConsumer<Integer,Integer> swapFunc) {
 
-		new QuickSorter<T>(comparator).sort(new Sequence<>() {
+		new QuickSorter<T>(comparator).sort(new Sequence<T>() {
 			@Override public int size() {
 				return sizeFunc.get();
 			}
@@ -1486,5 +1474,43 @@ public class Matrix <T extends Ordinal<T>> implements Cloneable, Iterable<Matrix
 		  set.addAll(getLocalExtremums(maximum));
 		  return set;
 	 }
+	
+	/**
+	 * The class provides access to parent matrix as set of pairs of diagonals for further ordering by sorter class
+	 * @author Serhii Pylypenko
+	 */
+	public class DiagonallyScannedSequence implements Sequence<T> {
+			  
+		@Override public int size() {
+			return getDimension()*getDimension();
+		}
+		
+		//maps index of sequence item to row&column 
+		private Position mapIndexToPosition(final int index) {
+			final int dividend=index/getDimension();
+			final int remainder=index%getDimension();
+			final int firstPartSize=getDimension()-dividend;
+			//final int secondPartSize=dividend;
+			final int row=remainder<firstPartSize?
+					dividend+remainder:
+						remainder-firstPartSize;
+			final int column=remainder;
+			return new Position(row,column);
+		}
+	
+		@Override public T getKey(final int index) {
+			return mapIndexToPosition(index).getValue();
+		}
+	
+		@Override public void swap(final int from, final int to) {
+			final Position fromRef=mapIndexToPosition(from);
+			final Position toRef=mapIndexToPosition(to);
+			
+			final T save=fromRef.getValue();
+			fromRef.setValue(toRef.getValue());
+			toRef.setValue(save);	
+		}
+		  
+	}
 	 
 }

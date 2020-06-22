@@ -11,7 +11,7 @@ public class Decimal implements Ordinal<Decimal> {
 	public static final Function<Long,Decimal> LONG_INITIALIZER = (x)->new Decimal(x);
 	public static final Function<Double,Decimal> DOUBLE_INITIALIZER = (x)->new Decimal(x);
 
-	public static final Decimal ZERO=new Decimal(0);
+	public static final Decimal ZERO=new Decimal(0L);
 	
 	private final BigDecimal value;
 
@@ -79,7 +79,8 @@ public class Decimal implements Ordinal<Decimal> {
 		return new Decimal(value.max(a.value));
 	}
 	
-	@Override public Decimal negate() {
+	@Override
+	public Decimal negate() {
 		return new Decimal(value.negate());
 	}
 	
