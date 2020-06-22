@@ -21,3 +21,4 @@ Studying Java data structures and algorithms
  * 18. Sorting matrix by column characteristics in descending order
  * 19. Determining set of local minimums and its size
  * 20. Determining smallest of local maximums
+ * 21. Full/partial quick/selection sort of real matrix by diagonal
